@@ -44,7 +44,7 @@ Run `prepare_dataset.py` to prepare protein interaction data from sources of int
 The following data sources are included (**Last update: 2024.4.15**)
 * Active:
   * [BioGRID](https://downloads.thebiogrid.org/Download/BioGRID/Latest-Release/BIOGRID-ALL-LATEST.mitab.zip)
-  * [IntAct](ftp://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/intact.zip)
+  * [IntAct](https://ftp.ebi.ac.uk/pub/databases/intact/current/psimitab/intact.zip)
   * PDB: copy to `static_datasets` from self-maintained PDB interaction data directory
 * Inactive:
   * DIP (`dip20170205.txt`)
