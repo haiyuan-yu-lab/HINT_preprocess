@@ -8,11 +8,13 @@ import datetime
 import time
 import shutil
 from glob import glob
-import gzip
+import json
+import numpy as np
 import pandas as pd
 from bs4 import BeautifulSoup 
 from bs4 import BeautifulStoneSoup
 
+from collections import defaultdict
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 # sys.path.append(os.path.dirname(__file__))
@@ -20,10 +22,21 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from constants import *
 
+"""
+Protein interaction dataset preparation
+  - Download dataset from source
+  - Load static datasets
+  - Parse raw data files into TAB-separated files
+
+  Revised from Junke's scripts
+  Updated by Yilin (April 2024)
+"""
+
 # Wrapper function to download files given an URL, used to load datasets
 def downloadFile(url, target_dir):
     os.system('wget -P {} -q {}'.format(target_dir, url))
-    
+
+
 def get_url_contents(url):
     request = urllib.request.urlopen(url)
     content = request.read()
@@ -78,37 +91,7 @@ def download_datasets(data_root):
     downloadFile(INTACT_URL, str(parse_target_path))
     intact_zip = str(parse_target_path / INTACT_URL.split('/')[-1])
     subprocess.call(['unzip', '-d', str(parse_target_path), intact_zip])
-    # shutil.move("intact.txt", parse_target_path / 'intact.txt')
-
-    # MINT Download
-    # mintFolder = "ftp://mint.bio.uniroma2.it/pub/release/mitab26/current/"
-    # mraw_interactions = [x.strip().split(' ')[-1] for x in get_url_contents(mintFolder).split('\n') if 'full-binary' in x][0]
-    # downloadFile(mintFolder + mraw_interactions)
-    # shutil.move(mraw_interactions, '../parseTargets/%s' % (mraw_interactions))
-
-    # downloadFile("http://mint.bio.uniroma2.it/mitab/MINT_MiTab.txt")
-    # shutil.move('MINT_MiTab.txt', '../parseTargets/%s' % ('MINT_MiTab.txt'))
-
-    # # MIPS Download and unzip
-    # mipsURL = "http://mips.helmholtz-muenchen.de/proj/ppi/data/mppi.gz"
-    # downloadFile(mipsURL)
-    # subprocess.call(['gzip', '-d', 'mppi.gz'])
-    # shutil.move("mppi", '../parseTargets/mppi')
-
-    # iRefWeb Download and unzip
-    # iRefWebURL = "ftp://ftp.no.embnet.org/irefindex/data/archive/"
-    # files = [x.split(' ')[-1]
-    #          for x in get_url_contents(iRefWebURL).split('\n') if 'release' in x]
-    # iRefWebRelease = sorted(
-    #     files, key=lambda x: float(x.split('_')[-1]))[-1].strip()
-    # iRefSubDir = iRefWebURL + iRefWebRelease + "/psi_mitab/MITAB2.6/"
-    # iRefFile = [x.split(' ')[-1].strip()
-    #             for x in get_url_contents(iRefSubDir).split('\n') if 'All' in x][0]
-    # downloadFile(iRefSubDir + iRefFile)
-    # subprocess.call(['unzip', iRefFile])
-    # iRef = iRefFile.replace('.zip', '')
-    # shutil.move(iRef, '../parseTargets/%s' % (iRef))
-
+    
     # Move the static datasets (Which are placed there by a user, not automatically)
     # os.chdir('../..')
     staticFiles = os.listdir(static_data_root)
@@ -459,7 +442,54 @@ def replace_explicit_interactome(update_root):
     with open(output_root / 'raw_interactions.txt', 'w') as f:
         for line in raw_interactions:
             f.write('\t'.join(line) + '\n')  
+
+
+def revise_parsed_raw_interaction(df_raw):
+    """
+    Revise parsed raw_interactions and fill UniProt IDs when available from source
+
+    """
+    idx = (~df_raw['idA'].str.contains('\|'))
+    df_raw.loc[idx, 'idA'] = df_raw.loc[idx].apply(lambda x: '|'.join((x['source'], x['idA'])), axis=1)
+    idx = (~df_raw['idB'].str.contains('\|'))
+    df_raw.loc[idx, 'idB'] = df_raw.loc[idx].apply(lambda x: '|'.join((x['source'], x['idB'])), axis=1)
+    df_raw['idtype_A'], df_raw['idA'] = zip(*df_raw['idA'].apply(lambda x: x.split('|')))
+    df_raw['idtype_B'], df_raw['idB'] = zip(*df_raw['idB'].apply(lambda x: x.split('|')))
+
+    # interactions with uniprot IDs for both proteins
+    ppi_uprot = df_raw[(df_raw['idtype_A'].str.contains('uniprot')) & (df_raw['idtype_B'].str.contains('uniprot'))].reset_index(drop=True)
+    # row number as record index (same entry from original dataset); map row number to uniprot IDs (no additional ID mapping needed for these entries)
+    rownum2ppi = dict(zip(ppi_uprot['row_number'], ppi_uprot['idA'] + ':' + ppi_uprot['idB']))
+    idx = df_raw['row_number'].isin(rownum2ppi.keys())
+    df_raw.loc[idx, 'UniProt_A'], df_raw.loc[idx, 'UniProt_B'] = \
+        zip(*df_raw.loc[idx].apply(lambda x: rownum2ppi[x['row_number']].split(':'), axis=1))
     
+    any2uprot = dict()
+    for suffix in ['A', 'B']:
+        idx = df_raw[f'UniProt_{suffix}'].notna() & (~df_raw[f'idtype_{suffix}'].str.contains('uniprot'))
+        any2uprot.update(dict(zip(df_raw.loc[idx, f'idtype_{suffix}'] + '|' + df_raw.loc[idx, f'id{suffix}'], 
+                                  df_raw.loc[idx, f'UniProt_{suffix}'])))
+        # print(len(any2uprot))
+    for suffix in ['A', 'B']:
+        idx1 = df_raw[f'idtype_{suffix}'].str.contains('uniprot')
+        df_raw.loc[idx1, f'UniProt_{suffix}'] = df_raw.loc[idx1, f'id{suffix}']
+        idx = df_raw[f'UniProt_{suffix}'].isna()
+        df_raw.loc[idx, f'UniProt_{suffix}'] = df_raw.loc[idx].apply(lambda x: any2uprot.get('|'.join([x[f'idtype_{suffix}'], str(x[f'id{suffix}'])]), np.nan), axis=1)
+
+    df_raw_trim = df_raw.drop_duplicates(['source', 'row_number', 'method', 'publ', 'taxa', 'UniProt_A', 'UniProt_B']).reset_index(drop=True)
+    df_raw_trim['idtype_A'] = df_raw_trim['idtype_A'].str.lower()
+    df_raw_trim['idtype_B'] = df_raw_trim['idtype_B'].str.lower()
+    target_ids_by_type = defaultdict(set)
+    ppi_idtypes = pd.concat([df_raw_trim['idtype_A'], df_raw_trim['idtype_B']]).drop_duplicates().tolist()
+    for suffix in ['A', 'B']:
+        idx = df_raw_trim[f'UniProt_{suffix}'].isna()
+        for itype in ppi_idtypes:
+            tmp = df_raw_trim[idx & (df_raw_trim[f'idtype_{suffix}'] == itype)]
+            target_ids_by_type[itype].update(tmp[f'id{suffix}'].astype(str))
+    # len(ppi_idtypes)
+
+    return df_raw_trim, target_ids_by_type
+
 
 if __name__ == '__main__':
     # Set up starting / output directories
@@ -540,3 +570,18 @@ if __name__ == '__main__':
     """
     replace_explicit_interactome(update_dir)
     # Dataset ready for curation
+
+    """
+    Step 3.1 - Revise parsed raw_interaction data and fill in UniProt IDs if available in source
+    """
+    raw_interactions = pd.read_csv(update_root / 'outputs/raw_interactions.txt', sep='\t')
+
+    cache_root = update_root / 'outputs/cache/'
+    if not cache_root.exists():
+        cache_root.mkdir(parents=True, exist_ok=True)
+    
+    revised_interactions, target_ids_by_type = revise_parsed_raw_interaction(raw_interactions)
+    revised_interactions.to_csv(cache_root / 'raw_interactions_filled_partial.txt', index=False, sep='\t')
+    with open(cache_root / 'mapping_targets_by_type.json', 'w') as f:
+        json.dump(target_ids_by_type, f, indent=2)
+    
