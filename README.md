@@ -81,4 +81,55 @@ Format: `"ID_TYPE|SOURCE_ID": "UNIPROT_ID1(|UNIPROT_ID2|UNIPROT_ID3...)"` (Examp
 
 ### 4. Proceed to remaining HINT data curation pipeline
 
-Run codes in jupyter notebook: `4-HINT_data_curation.ipynb`
+Run codes in jupyter notebook: `4-HINT_data_curation.ipynb`. The following files will be generated and organized in the following structure in output directory.
+
+```
+|-- taxid2name_short.txt
+|-- raw_interactome.txt
+|-- HINT_format
+    |-- protein_meta.txt
+    |-- binary_all.txt
+    |-- binary_hq.txt
+    |-- both_all.txt
+    |-- both_hq.txt
+    |-- cocomp_all.txt
+    |-- cocomp_hq.txt
+    |-- taxa
+        |-- HomoSapiens
+        |   |-- HomoSapiens_binary_all.txt
+        |   |-- HomoSapiens_binary_hq.txt
+        |   |-- HomoSapiens_both_all.txt
+        |   |-- HomoSapiens_both_hq.txt
+        |   |-- HomoSapiens_cocomp_all.txt
+        |   |-- HomoSapiens_cocomp_hq.txt
+        |-- MusMusculus
+        |   |-- MusMusculus_binary_all.txt
+        |   |-- MusMusculus_binary_hq.txt
+        |   |-- MusMusculus_both_all.txt
+        |   |-- MusMusculus_both_hq.txt
+        |   |-- MusMusculus_cocomp_all.txt
+        |   |-- MusMusculus_cocomp_hq.txt
+        |-- ...
+```
+
+## Handling archived accessions with UniParc
+
+The UniProt Archive (UniParc) is a non-redundant protein sequence archive,
+containing all new and revised protein sequences from all publicly available 
+sources. 
+
+Sometimes, protein IDs in source database are mapped to UniProt IDs that are deleted in current release. 
+In that case, we can retrieve protein information from UniParc data. Raw UniParc files are downloaded from https://ftp.uniprot.org/pub/databases/uniprot/current_release/uniparc/xml/all/ in `download.sh` script.
+
+Run `parse_uniparc.sh` to parse raw XML format UniParc files into TAB-separated format and extract inactive entries.
+
+* Example of parsed file
+```
+accession	uniprot	is_reviewed	status	taxa	protein_name	gene_name	seq_length	source_file
+UPI00000001D2	Q71UK0	False	Y	10090	Growth factor receptor (Fragment)		61	uniparc_p1
+UPI000000075A	Q0NCH3	False	N	587201	Membrane protein	VARV_SAF65_102_152	277	uniparc_p1
+UPI00000002D3	Q549A3	False	Y	4232	LIM domain protein PLIM1a	PLIM1a	219	uniparc_p1
+UPI0000000563	Q6LCT9	False	Y	9606	Diabetes mellitus type I autoantigen	ICA1	87	uniparc_p1
+```
+
+[Optional] Continue with the second part in `parse_uniparc.py` script to extract information for target species.
