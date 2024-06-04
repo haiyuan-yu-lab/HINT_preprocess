@@ -21,6 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 # sys.path.append(os.path.abspath('..'))
 
 from constants import *
+from configs import *
 
 """
 Protein interaction dataset preparation
@@ -494,11 +495,14 @@ def revise_parsed_raw_interaction(df_raw):
 if __name__ == '__main__':
     # Set up starting / output directories
     # home = os.getcwd()
-    update_dir = "/home/yl986/data/HINT/update_2024"
-    archive_data_dir = '/home/yl986/data/HINT/data/'
+    # update_dir = "/home/yl986/data/HINT/update_2024"
+    # archive_data_dir = '/home/yl986/data/HINT/data/'
+    update_dir = UPDATE_DIR
+    archive_data_dir = ARCHIVE_DATA_DIR
     wipe = False
     ROW_COUNTER = [0]
-
+    update_root = Path(update_dir)
+    
     """
     Step 0 - set up paths
     """
@@ -507,7 +511,6 @@ if __name__ == '__main__':
         os.system("rm -rf {0}".format(update_dir))
 
     # Create output directory if it does not already exist
-    update_root = Path(update_dir)
     if not update_root.exists():
         update_root.mkdir(parents=True)
         # os.system("mkdir {0}".format(update_dir))
@@ -582,6 +585,10 @@ if __name__ == '__main__':
     
     revised_interactions, target_ids_by_type = revise_parsed_raw_interaction(raw_interactions)
     revised_interactions.to_csv(cache_root / 'raw_interactions_filled_partial.txt', index=False, sep='\t')
+    
+    for k, v in target_ids_by_type.items():
+        target_ids_by_type[k] = sorted(v)
+
     with open(cache_root / 'mapping_targets_by_type.json', 'w') as f:
         json.dump(target_ids_by_type, f, indent=2)
     

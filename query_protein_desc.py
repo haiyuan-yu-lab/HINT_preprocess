@@ -2,6 +2,7 @@ import os, sys
 from pathlib import Path
 
 import pandas as pd
+from configs import *
 
 
 """
@@ -48,8 +49,9 @@ def extract_uprot_meta_info(df_prot, source_path, out_path, pid_col='UniProt', m
 
 
 if __name__ == '__main__':
-    data_root = Path('/home/yl986/data/HINT/outputs_2023/cache')
+    update_root = Path(UPDATE_DIR)
+    data_root = update_root / 'outputs/cache'
     prot_meta_root = Path('/home/yl986/data/HINT/uniprot_source/release_202401/knowledgebase/complete/meta')
     df_prot = pd.read_csv(data_root / 'id_to_uniprot.txt', sep='\t')
 
-    extract_uprot_meta_info(df_prot, prot_meta_root, out_path=data_root, pid_col='primary_ac_short')
+    extract_uprot_meta_info(df_prot, prot_meta_root, out_path=data_root, pid_col='primary_short')

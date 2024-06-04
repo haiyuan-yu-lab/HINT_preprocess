@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from constants import ACCEPTED_IDS
+from configs import *
 
 def fetch_select_type_to_uprot(fpath, fout_path, target_ids, chunksize=1000000):
     """
@@ -86,13 +87,16 @@ def fetch_protein_gene_desc(fpath, fout_path, target_fields, chunksize=1000000):
     return uprot2info_dict
 
 if __name__ == '__main__':
-    source_root = Path('/home/yl986/data/HINT/uniprot_source/release_202401/knowledgebase/idmapping')
-    update_root = Path('/home/yl986/data/HINT')
+    source_root = Path(ID_MAPPING_SOURCE_DIR)
+    # update_root = Path('/home/yl986/data/HINT')
+    update_root = Path(UPDATE_DIR)
 
     idmapping_source_fpath = source_root / 'idmapping.dat.gz'
-    idmapping_out_fpath = source_root / 'cache/target_type_to_uprot1.json'
+    idmapping_out_fpath = source_root / 'cache/target_type_to_uprot.json'
     prot_to_desc_json = source_root / 'cache/prot_gene_info.json'
     prot_to_desc_tab = source_root / 'cache/prot_gene_info.tsv'
+
+    OVERWRITE_SOURCE_MAPPING = False
 
     target_ids = ['BioGRID',
                 'ChEMBL',
@@ -108,25 +112,12 @@ if __name__ == '__main__':
     
     print('Fetching protein ID mapping...')
 
-    fetch_select_type_to_uprot(idmapping_source_fpath, 
-                               idmapping_out_fpath,
-                               target_ids=target_ids,
-                               chunksize=1000000)
+    if not idmapping_out_fpath.exists() or OVERWRITE_SOURCE_MAPPING:
+        fetch_select_type_to_uprot(idmapping_source_fpath, 
+                                idmapping_out_fpath,
+                                target_ids=target_ids,
+                                chunksize=1000000)
     
-    print('Fetching protein description...')
-    target_fields = ['UniProtKB-ID', 'Gene_Name', 'Gene_ORFName', 'NCBI_TaxID']
-    uprot2info_dict = fetch_protein_gene_desc(idmapping_source_fpath,
-                                              prot_to_desc_json,
-                                              target_fields=target_fields,
-                                              chunksize=1000000)
-    print('Re-write protein description into table...')
-    with open(prot_to_desc_tab, 'w') as f:
-        f.write('\t'.join(['uprot']+target_fields) + '\n')
-        for uprot, desc in uprot2info_dict.items():
-            line = '\t'.join([desc[field] for field in target_fields])
-            f.write(f'{uprot}\t{line}\n')
-    
-
     with open(update_root / 'outputs/cache/mapping_targets_by_type.json', 'r') as f:
         mapping_targets_by_type = json.load(f)
 
@@ -152,3 +143,19 @@ if __name__ == '__main__':
 
     with open(update_root / 'outputs/cache/target_result.json', 'w') as f:
         json.dump(result_dict, f, indent=2)
+    
+    print('Fetching protein description...')
+    if not prot_to_desc_json.exists() or OVERWRITE_SOURCE_MAPPING:
+        target_fields = ['UniProtKB-ID', 'Gene_Name', 'Gene_ORFName', 'NCBI_TaxID']
+        uprot2info_dict = fetch_protein_gene_desc(idmapping_source_fpath,
+                                                prot_to_desc_json,
+                                                target_fields=target_fields,
+                                                chunksize=1000000)
+    if not prot_to_desc_tab.exists() or OVERWRITE_SOURCE_MAPPING:
+        print('Re-write protein description into table...')
+        with open(prot_to_desc_tab, 'w') as f:
+            f.write('\t'.join(['uprot']+target_fields) + '\n')
+            for uprot, desc in uprot2info_dict.items():
+                line = '\t'.join([desc[field] for field in target_fields])
+                f.write(f'{uprot}\t{line}\n')
+    
