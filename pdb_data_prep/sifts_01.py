@@ -22,6 +22,12 @@ if not os.path.exists(SIFTS_PARSED_DIR):
 output_file = os.path.join(SIFTS_MAPPING_FILE)
 # sifts_data_path = '/home/resources/sifts/data/*/*.gz'
 # output_file = '/home/resources/sifts/parsed_files/pdbresiduemapping.txt'
+if not os.path.exists(PDB_TO_RUN):
+    sifts_files = sorted(glob.glob(f'{SIFTS_DATA_DIR}/*/*.gz'), key=lambda f: os.path.basename(f))
+    pdb_list = [os.path.basename(s).split('.')[0] for s in sifts_files]
+    with open(PDB_TO_RUN, 'w') as f:
+        f.write('\n'.join(pdb_list))
+        
 with open(PDB_TO_RUN) as f:
     pdb_list = f.read().splitlines()
 sifts_files = ['{}/{}/{}.xml.gz'.format(SIFTS_DATA_DIR, pid.lower()[1:-1], pid.lower()) for pid in pdb_list]
