@@ -6,6 +6,11 @@
 
 '''Roughly estimates the inter-chain distance for all PDB chain pairs to help decide which pairs it is worth running the full interface residue calculation on.'''
 
+"""
+Input: SIFTS_MAPPING_FILE ('{SIFTS_PARSED_DIR}/pdbresiduemapping.txt')
+Output: {IRES_PARSED_DIR}/'bounding_box_pdb_chain_dists.txt'
+"""
+
 import os, sys, time
 import gzip
 import numpy as np

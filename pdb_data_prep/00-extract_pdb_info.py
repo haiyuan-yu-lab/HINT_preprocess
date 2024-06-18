@@ -61,7 +61,6 @@ def read_pdb_format(pdb_fpath):
 
 
 if __name__ == '__main__':    
-    # YL modified for testing
     output_root = OUTPUT_DIR
     parsed_dir = f'{output_root}/pdb/parsed_files'
     if not os.path.exists(parsed_dir):
@@ -69,6 +68,11 @@ if __name__ == '__main__':
     output_file = f'{parsed_dir}/pdb_info.txt'
 
     # all_pdb_files = sorted(glob.glob('/home/resources/pdb/data/*/*.gz'))
+    if not os.path.exists(PDB_TO_RUN):
+        all_pdb_files = sorted(glob.glob(f'{PDB_DATA_DIR}/*/*.gz'))
+        pdb_list = [os.path.basename(s).split('.')[0][3:] for s in all_pdb_files]
+        with open(PDB_TO_RUN, 'w') as f:
+            f.write('\n'.join(pdb_list))
 
     with open(PDB_TO_RUN) as f:
         pdb_list = f.read().splitlines()

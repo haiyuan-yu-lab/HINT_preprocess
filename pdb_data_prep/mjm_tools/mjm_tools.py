@@ -739,9 +739,10 @@ def naccess(pdb_file, parsed=False):
         # Make sure output files are not empty (EDIT made by Shayne July 12, 2018)
         # See above
         if(os.stat(os.path.splitext(pdb_file)[0]+'.rsa').st_size == 0):
-            print('ERROR: Naccess .rsa file is empty. We suspect this is an edge case where Naccess cannot calculate ASA for extremely large chains. The following command was attempted: %s %s' %(NACCESS_PATH, pdb_file))
-            print('WARNING: This error message is only a temporary measure. The longterm solution will involve identifying an alternative SASA calculator. If you see this message, please contact Shayne.')
-            exit()
+            raise IOError('ERROR: Naccess .rsa file is empty. We suspect this is an edge case where Naccess cannot calculate ASA for extremely large chains.'
+                          ' The following command was attempted: %s %s' %(NACCESS_PATH, pdb_file))
+            # print('WARNING: This error message is only a temporary measure. The longterm solution will involve identifying an alternative SASA calculator. If you see this message, please contact Shayne.')
+            # exit()
     except IOError:
         raise IOError('ERROR: Naccess .rsa file was not written. The following command was attempted: %s %s' %(NACCESS_PATH, pdb_file))
         exit()
