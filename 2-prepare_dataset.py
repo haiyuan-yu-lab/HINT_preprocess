@@ -208,6 +208,10 @@ def standardizeMITAB(fpath, sourceName, filehandler):
 
 def standardize_datasets(
         update_root,
+        ires_fpath,
+        pdb_info_fpath,
+        ires_pdblike_fpath=None,
+        pdb_bundle_info_fpath=None,
         runBio = True,
         runMINT = False, # MINT Downloads are no longer working
         runIREF = True,
@@ -225,7 +229,11 @@ def standardize_datasets(
         update_root = Path(update_root)
     data_root = update_root / 'data'
     parse_target_path = update_root / 'data/parseTargets'
-    pdb_data_root = data_root / 'static_datasets'
+    # pdb_data_root = data_root / 'static_datasets'
+    if isinstance(ires_fpath, str):
+        ires_fpath = Path(ires_fpath)
+    if isinstance(pdb_info_fpath, str):
+        pdb_info_fpath = Path(pdb_info_fpath)
     output_root = update_root / 'outputs'
     if not output_root.exists():
         output_root.mkdir(parents=True)
@@ -350,18 +358,34 @@ def standardize_datasets(
 
     if runPDB:
         print("\nparsing PDB Logs ")
-        if not ((pdb_data_root / 'ires_perpdb_alltax.txt').exists() and (pdb_data_root / 'pdb_info.txt').exists()):
+        if not (ires_fpath.exists() and (pdb_info_fpath).exists()):
             print('PDB data not available')
         else:
-            interactions = open(pdb_data_root / 'ires_perpdb_alltax.txt', 'r')
-            interactions.readline()
+            print('Load IRES from standard PDB format data...')
+            with open(ires_fpath, 'r') as f_ires:
+                ires_records = f_ires.read().splitlines()[1:]  # skip header
+                       
+            # interactions = open(ires_fpath, 'r')
+            # interactions.readline()
     #         publications = dict([(line.split('\t')[0], (line.split('\t')[2], line.split('\t')[4])) for line in open(
     #             '/home/resources/pdb/parsed_files/pdb_info.txt').read().strip().split('\n')[1:]])
-            publications = dict([(line.split('\t')[0], (line.split('\t')[2], line.split('\t')[4])) \
-                                for line in open(pdb_data_root / 'pdb_info.txt').read().strip().split('\n')[1:]])
+            pdb2publ = dict([(line.split('\t')[0], line.split('\t')[2]) \
+                                for line in open(pdb_info_fpath).read().splitlines()[1:]])
+            
+            if ires_pdblike_fpath and pdb_bundle_info_fpath:  # Add PDB-bundle data (for large PDB)
+                if os.path.exists(ires_pdblike_fpath) and os.path.exists(pdb_bundle_info_fpath):
+                    print('Load IRES from PDB-bundle format data...')
+                    with open(ires_pdblike_fpath, 'r') as f_ires:
+                        ires_records = ires_records + f_ires.read().splitlines()[1:]
+                    pdb2publ.update(dict([(line.split('\t')[0], line.split('\t')[2]) \
+                                          for line in open(pdb_bundle_info_fpath).read().splitlines()[1:]]))
+
             dumped = set()
-            for line in interactions.readlines():
+            # ires_records = interactions.readlines()
+            for line in ires_records:
                 ROW_COUNTER[0] += 1
+                if ROW_COUNTER[0] % 50000 == 0:
+                    print("\n[%s] Working on ROW %s" % (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), ROW_COUNTER[0]))
                 interaction = line.split('\t')
                 idA, idB, pdb = interaction[:3]
                 taxaA, taxaB = interaction[5:7]
@@ -371,14 +395,14 @@ def standardize_datasets(
                 if(taxaB in REDUNDANT_TAXA):
                     taxaB = REDUNDANT_TAXA[taxaB]
                 
-                if pdb not in publications:
-                    dumped.add(line)
+                if pdb not in pdb2publ:
+                    dumped.add('\t'.join(interaction[:7]))
                     continue
-                pubID, experiment_type = publications[pdb]
+                pubID = pdb2publ[pdb]
                 if pubID.strip() == '':
                     pubID = 'PDB_' + str(pdb)
                 if taxaA != taxaB:
-                    dumped.add(line)
+                    dumped.add('\t'.join(interaction[:7]))
                     continue
                 readout = ['PDB', str(ROW_COUNTER[0]), 'uniprotkb|' + idA,
                         'uniprotkb|' + idB, '0114', pubID, taxaA]
@@ -507,32 +531,32 @@ if __name__ == '__main__':
     Step 0 - set up paths
     """
     # Recreate the directories from scratch
-    if(wipe):
-        os.system("rm -rf {0}".format(update_dir))
+    # if(wipe):
+    #     os.system("rm -rf {0}".format(update_dir))
 
-    # Create output directory if it does not already exist
-    if not update_root.exists():
-        update_root.mkdir(parents=True)
-        # os.system("mkdir {0}".format(update_dir))
-    data_root = update_root / 'data'
-    if not data_root.exists():
-        data_root.mkdir(parents=True)
+    # # Create output directory if it does not already exist
+    # if not update_root.exists():
+    #     update_root.mkdir(parents=True)
+    #     # os.system("mkdir {0}".format(update_dir))
+    # data_root = update_root / 'data'
+    # if not data_root.exists():
+    #     data_root.mkdir(parents=True)
     
-    # Copy over necessary files that are not automatically created
-    # Static Datasets
-    os.system("cp {}/static_datasets/ {}/data/ -r".format(archive_data_dir, update_dir))
+    # # Copy over necessary files that are not automatically created
+    # # Static Datasets
+    # os.system("cp {}/static_datasets/ {}/data/ -r".format(archive_data_dir, update_dir))
 
-    # Bouncer
-    os.system("cp {}/bouncer {}/data/ -r".format(archive_data_dir, update_dir))
+    # # Bouncer
+    # os.system("cp {}/bouncer {}/data/ -r".format(archive_data_dir, update_dir))
 
-    # Explicit Interactomes
-    os.system("cp {}/explicit_interactomes/ {}/data/ -r".format(archive_data_dir, update_dir))
+    # # Explicit Interactomes
+    # os.system("cp {}/explicit_interactomes/ {}/data/ -r".format(archive_data_dir, update_dir))
 
-    # Taxon ID to Names
-    os.system("cp {}/taxid2name.txt {}/data/".format(archive_data_dir, update_dir))
+    # # Taxon ID to Names
+    # os.system("cp {}/taxid2name.txt {}/data/".format(archive_data_dir, update_dir))
 
-    # Evidence Codes
-    os.system("cp {}/evidence_code*.txt {}/data/".format(archive_data_dir, update_dir))
+    # # Evidence Codes
+    # os.system("cp {}/evidence_code*.txt {}/data/".format(archive_data_dir, update_dir))
 
     # Create any necessary file structure not handled by the pipeline itself
  
@@ -554,7 +578,7 @@ if __name__ == '__main__':
     """
     Step 1 - Download datasets
     """
-    download_datasets(data_root)
+    # download_datasets(data_root)
     
     """
     Step 2 - Parse raw data and generate initial `raw_interactions.txt` file
@@ -563,7 +587,10 @@ if __name__ == '__main__':
     This step also reads in information from our IRES and PDB resources to find PDB interactions.
     Need to confirm that both of these are updating properly.
     """
-    standardize_datasets(update_dir, **DATA_CONFIGS)
+    standardize_datasets(update_dir, IRES_FILE, PDB_INFO_FILE, 
+                         ires_pdblike_fpath=IRES_PDB_BUNDLE_FILE, 
+                         pdb_bundle_info_fpath=PDB_BUNDLE_INFO_FILE, 
+                         **DATA_CONFIGS)
     print('Number of rows parsed:', ROW_COUNTER[0])
 
     """

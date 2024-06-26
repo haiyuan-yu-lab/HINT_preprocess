@@ -11,6 +11,11 @@ DATA_CONFIGS = {
     'runPDB': True
 }
 
+IRES_FILE = '/home/yl986/data/IRES/parsed_files/20240616/ires_perpdb_alltax.txt'
+PDB_INFO_FILE = '/home/yl986/data/pdb/20240616/parsed_files/pdb_info.txt'
+IRES_PDB_BUNDLE_FILE = '/home/yl986/data/IRES/parsed_files/20240616/ires_perpdb_alltax_pdblike.txt'
+PDB_BUNDLE_INFO_FILE = '/home/yl986/data/pdb/20240616/parsed_files/pdblike_info.txt'
+
 # URLs
 # bioGridURL = "http://thebiogrid.org/downloads/archives/Latest%20Release/BIOGRID-ALL-LATEST.mitab.zip"
 BIOGRID_URL = "https://downloads.thebiogrid.org/Download/BioGRID/Latest-Release/BIOGRID-ALL-LATEST.mitab.zip"
