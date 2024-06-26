@@ -2,9 +2,10 @@ OUTPUT_DIR = '/local/storage/yl986/script_hub/HINT_preprocess/pdb_data_prep/data
 # PDB_DATA_DIR = '/local/storage/resources/pdb/data/'
 # PDB_DATA_DIR = '/local/storage/yl986_02/data/pdb/'  # server02
 PDB_DATA_DIR = '/fs/cbsuhy02/storage/yl986_02/data/pdb/'  # server01
+PDB_BUNDLE_DATA_DIR = f'{PDB_DATA_DIR}/pdb_like/data/'
 # # PDB_TO_RUN = '/local/storage/yl986/script_hub/nightly_scripts/test_data/pdb_to_run.txt'
 PDB_TO_RUN = '/local/storage/yl986/script_hub/HINT_preprocess/pdb_data_prep/data/pdb_to_run.txt'
-
+PDB_BUNDLE_LIST = '/local/storage/yl986/script_hub/HINT_preprocess/pdb_data_prep/data/pdb/pdb_like/parsed_files/pdb_like_list.txt'
 # g2 configs
 # OUTPUT_DIR = '/home/yl986/scripts/HINT_preprocess/pdb_data_prep/data/test_data'
 #PDB_DATA_DIR = '/share/yu/resources/pdb/'
