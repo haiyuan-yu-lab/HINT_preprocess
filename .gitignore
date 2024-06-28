@@ -1,6 +1,7 @@
 # Project specific files
 logs/
 *.slurm
+pdb_data_prep/data/
 
 
 # Byte-compiled / optimized / DLL files
