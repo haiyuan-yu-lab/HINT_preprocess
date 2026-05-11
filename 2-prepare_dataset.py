@@ -25,12 +25,11 @@ from configs import *
 
 """
 Protein interaction dataset preparation
-  - Download dataset from source
-  - Load static datasets
+  - Prerequisite: download PPI source data
   - Parse raw data files into TAB-separated files
 
   Revised from Junke's scripts
-  Updated by Yilin (April 2024)
+  Updated by Yilin (May 2026)
 """
 
 # Wrapper function to download files given an URL, used to load datasets
@@ -43,98 +42,6 @@ def get_url_contents(url):
     content = request.read()
     request.close()
     return content
-
-
-def download_datasets(data_root):
-    """
-    PIPELINE STEP 1: Dataset downloading pipeline
-    READS : data/static_datasets/*
-    WRITES: data/parseTargets/*
-        Notes made by Junke on 10/09/2023
-        * DIP seems to have stopped updating since 20170205
-        * Add 2 more static datasets since some databases are no longer updating
-    """
-    if isinstance(data_root, str):
-        data_root = Path(data_root)
-
-    tmp_path = data_root / 'tmp'
-    parse_target_path = data_root / 'parseTargets'
-    static_data_root = data_root / 'static_datasets'
-    if not parse_target_path.exists():
-        parse_target_path.mkdir(parents=True)
-    if not static_data_root.exists():
-        static_data_root.mkdir()
-
-    # Remove the previous parseTargets folder
-    if 'parseTargets' in os.listdir(data_root):
-        shutil.rmtree(parse_target_path)
-    if 'tmp' in os.listdir(data_root):
-        shutil.rmtree(tmp_path)
-
-    # Create the folders we will be working on and enter tmp
-    tmp_path.mkdir(parents=True)
-    parse_target_path.mkdir(parents=True)
-    # os.chdir('./data/tmp')
-
-    # BioGrid Download and unzip
-    # bioGridVersion = get_url_contents(
-    #     'http://webservice.thebiogrid.org/version?accesskey=d1e4afe96b70c4c4668b07d8b7635cae').read()
-    # if bioGridVersion in ['3.4.131', '3.4.132', '3.4.133']:
-    #     bioGridVersion = '3.4.134'
-    downloadFile(BIOGRID_URL, str(parse_target_path))
-    biogrid_zip = str(parse_target_path / BIOGRID_URL.split('/')[-1])
-    subprocess.call(['unzip', '-d', str(parse_target_path), biogrid_zip])
-    # biogrid_txt_file = glob('BIOGRID*.txt')[0]
-    # shutil.move(biogrid_txt_file, str(parse_target_path / biogrid_txt_file))
-
-    # Intact Download
-    
-    downloadFile(INTACT_URL, str(parse_target_path))
-    intact_zip = str(parse_target_path / INTACT_URL.split('/')[-1])
-    subprocess.call(['unzip', '-d', str(parse_target_path), intact_zip])
-    
-    # Move the static datasets (Which are placed there by a user, not automatically)
-    # os.chdir('../..')
-    staticFiles = os.listdir(static_data_root)
-    for fname in staticFiles:
-        shutil.copy(static_data_root / fname, parse_target_path / fname)
-
-    # Now that we are done, remove the tmp folder
-    shutil.rmtree(tmp_path)
-
-    # Print reminder to admin about updating static_datasets
-    print("=" * 20)
-    print("REMEMBER TO MANUALLY REPLACE FILES IN data/static_datasets FOR:")
-    print("""
-        ================
-        DIP database   =
-        ================
-
-        URL: http://dip.doe-mbi.ucla.edu/dip/Download.cgi?SM=3
-        u: jfbeltran p: yulab
-
-        FILE: dip<date>.txt
-        + Tab separated (MITAB)
-
-        ================
-        Human Protein Reference Database
-        ================
-
-        URL: http://www.hprd.org/download
-        SUBMIT AGREEMENT FORM
-        UNZIP: tar zxvf HPRD_Release<n>_<date>.tar.gz
-        FILE: HPRD_Release<n>_<date>/BINARY_PROTEIN_PROTEIN_INTERACTIONS.txt
-        + Tab separated
-        
-        ================
-        PDB
-        ================
-        
-        copy parsed files from 
-        /fs/cbsuhyfs1/storage/resources/ires/parsed_files/ires_perpdb_alltax.txt &
-        /fs/cbsuhyfs1/storage/resources/ires/parsed_files/pdb_info.txt
-        to static_datasets
-        """)
 
 
 def standardizeMITAB(fpath, sourceName, filehandler):
@@ -208,10 +115,6 @@ def standardizeMITAB(fpath, sourceName, filehandler):
 
 def standardize_datasets(
         update_root,
-        ires_fpath,
-        pdb_info_fpath,
-        ires_pdblike_fpath=None,
-        pdb_bundle_info_fpath=None,
         runBio = True,
         runMINT = False, # MINT Downloads are no longer working
         runIREF = True,
@@ -229,11 +132,6 @@ def standardize_datasets(
         update_root = Path(update_root)
     data_root = update_root / 'data'
     parse_target_path = update_root / 'data/parseTargets'
-    # pdb_data_root = data_root / 'static_datasets'
-    if isinstance(ires_fpath, str):
-        ires_fpath = Path(ires_fpath)
-    if isinstance(pdb_info_fpath, str):
-        pdb_info_fpath = Path(pdb_info_fpath)
     output_root = update_root / 'outputs'
     if not output_root.exists():
         output_root.mkdir(parents=True)
@@ -245,16 +143,7 @@ def standardize_datasets(
     # Identify the corresponding file or files for each dataset
     files = os.listdir(parse_target_path)
     print(files)
-    # biogrid = "data/parseTargets/" + \
-    #     [f for f in files if "BIOGRID" in f and 'txt' in f][0]
-    # mint = "data/parseTargets/" + [f for f in files if "MINT" in f][0]
-    # iref = "data/parseTargets/" + [f for f in files if "All.mitab" in f][0]
-    # dip = "data/parseTargets/" + [f for f in files if f[:3] == 'dip'][0]
-    # intact = "data/parseTargets/" + [f for f in files if f == 'intact.txt'][0]
-    # hprd = "data/parseTargets/" + \
-    #     [f for f in files if "BINARY_PROTEIN_PROTEIN_INTERACTIONS.txt" == f][0]
-    # mips = "data/parseTargets/" + [f for f in files if "mppi" == f][0]
-
+    
     # CUSTOMIZABLE: Set flags for which datasets you would like to process
     # Parsing of each MITAB dataset
     if runDIP:
@@ -272,7 +161,7 @@ def standardize_datasets(
             print('BioGRID data not found')
             runBio = False
         
-    if runMINT:
+    if runMINT:  # default: False
         try:
             mint = list(parse_target_path.glob('*MINT*'))[0]
             standardizeMITAB(mint, "MINT", final)
@@ -358,10 +247,15 @@ def standardize_datasets(
 
     if runPDB:
         print("\nparsing PDB Logs ")
-        if not (ires_fpath.exists() and (pdb_info_fpath).exists()):
+        ires_fpath = parse_target_path.glob('ires_perpdb_*.txt')
+        pdb_info_fpath = parse_target_path / 'pdb_info.txt'
+        pdb_bundle_info_fpath = parse_target_path / 'pdblike_info.txt'
+        if not ires_fpath or not pdb_info_fpath.exists():
             print('PDB data not available')
         else:
-            print('Load IRES from standard PDB format data...')
+            ires_fpath = list(ires_fpath)[0]
+            print('Load IRES from standard PDB (and pdb-bundle) format data...')
+            
             with open(ires_fpath, 'r') as f_ires:
                 ires_records = f_ires.read().splitlines()[1:]  # skip header
                        
@@ -371,39 +265,38 @@ def standardize_datasets(
     #             '/home/resources/pdb/parsed_files/pdb_info.txt').read().strip().split('\n')[1:]])
             pdb2publ = dict([(line.split('\t')[0], line.split('\t')[2]) \
                                 for line in open(pdb_info_fpath).read().splitlines()[1:]])
-            
-            if ires_pdblike_fpath and pdb_bundle_info_fpath:  # Add PDB-bundle data (for large PDB)
-                if os.path.exists(ires_pdblike_fpath) and os.path.exists(pdb_bundle_info_fpath):
-                    print('Load IRES from PDB-bundle format data...')
-                    with open(ires_pdblike_fpath, 'r') as f_ires:
-                        ires_records = ires_records + f_ires.read().splitlines()[1:]
-                    pdb2publ.update(dict([(line.split('\t')[0], line.split('\t')[2]) \
-                                          for line in open(pdb_bundle_info_fpath).read().splitlines()[1:]]))
+            if pdb_bundle_info_fpath.exists():
+                pdb2publ.update(dict([(line.split('\t')[0], line.split('\t')[2]) \
+                                       for line in open(pdb_bundle_info_fpath).read().splitlines()[1:]]))
 
             dumped = set()
             # ires_records = interactions.readlines()
-            for line in ires_records:
+            df_ires = pd.read_csv(ires_fpath, sep='\t', dtype=str)
+            for i, record in df_ires.iterrows():
                 ROW_COUNTER[0] += 1
                 if ROW_COUNTER[0] % 50000 == 0:
                     print("\n[%s] Working on ROW %s" % (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), ROW_COUNTER[0]))
-                interaction = line.split('\t')
-                idA, idB, pdb = interaction[:3]
-                taxaA, taxaB = interaction[5:7]
+
+                idA, idB, pdb = record['UniProtA'], record['UniProtB'], record['PDB']
+                chainA, chainB = record['ChainA'], record['ChainB']
+                taxaA, taxaB = record['TaxIDA'], record['TaxIDB']
+
                 # Merge redundant taxa
                 if(taxaA in REDUNDANT_TAXA):
                     taxaA = REDUNDANT_TAXA[taxaA]
                 if(taxaB in REDUNDANT_TAXA):
                     taxaB = REDUNDANT_TAXA[taxaB]
                 
-                if pdb not in pdb2publ:
-                    dumped.add('\t'.join(interaction[:7]))
+                if pd.isna(idA) or pd.isna(idB) or (pdb not in pdb2publ) or (taxaA != taxaB):
+                    # dumped.add('\t'.join(interaction[:7]))
+                    dumped.add('\t'.join([str(x) for x in (idA, idB, pdb, chainA, chainB, taxaA, taxaB)]))
                     continue
                 pubID = pdb2publ[pdb]
                 if pubID.strip() == '':
                     pubID = 'PDB_' + str(pdb)
-                if taxaA != taxaB:
-                    dumped.add('\t'.join(interaction[:7]))
-                    continue
+                # if taxaA != taxaB:
+                #     dumped.add('\t'.join(interaction[:7]))
+                #     continue
                 readout = ['PDB', str(ROW_COUNTER[0]), 'uniprotkb|' + idA,
                         'uniprotkb|' + idB, '0114', pubID, taxaA]
                 final.write('\t'.join(readout) + "\n")
@@ -417,7 +310,7 @@ def standardize_datasets(
 
 def replace_explicit_interactome(update_root):
     """
-    PIPELINE STEP 3: Replace all entries from certain publication-method-taxa combos
+    Replace all entries from certain publication-method-taxa combos
 
     READS: 
       * `data/explicit_interactomes/*.txt`
@@ -518,83 +411,33 @@ def revise_parsed_raw_interaction(df_raw):
 
 if __name__ == '__main__':
     # Set up starting / output directories
-    # home = os.getcwd()
-    # update_dir = "/home/yl986/data/HINT/update_2024"
-    # archive_data_dir = '/home/yl986/data/HINT/data/'
-    update_dir = UPDATE_DIR
-    archive_data_dir = ARCHIVE_DATA_DIR
-    wipe = False
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Process HINT dataset')
+    parser.add_argument('--update_dir', type=str, help='Path to the update directory')
+    parser.add_argument('--archive_data_dir', type=str, default='/home/yl986/data/HINT/data/', help='Path to the archive data directory')
+    # parser.add_argument('--wipe', action='store_true', help='Wipe the update directory before processing')
+    args = parser.parse_args()
+
+    update_dir = args.update_dir
+    archive_data_dir = args.archive_data_dir
+    # wipe = args.wipe
+
     ROW_COUNTER = [0]
     update_root = Path(update_dir)
     
     """
-    Step 0 - set up paths
-    """
-    # Recreate the directories from scratch
-    # if(wipe):
-    #     os.system("rm -rf {0}".format(update_dir))
-
-    # # Create output directory if it does not already exist
-    # if not update_root.exists():
-    #     update_root.mkdir(parents=True)
-    #     # os.system("mkdir {0}".format(update_dir))
-    # data_root = update_root / 'data'
-    # if not data_root.exists():
-    #     data_root.mkdir(parents=True)
-    
-    # # Copy over necessary files that are not automatically created
-    # # Static Datasets
-    # os.system("cp {}/static_datasets/ {}/data/ -r".format(archive_data_dir, update_dir))
-
-    # # Bouncer
-    # os.system("cp {}/bouncer {}/data/ -r".format(archive_data_dir, update_dir))
-
-    # # Explicit Interactomes
-    # os.system("cp {}/explicit_interactomes/ {}/data/ -r".format(archive_data_dir, update_dir))
-
-    # # Taxon ID to Names
-    # os.system("cp {}/taxid2name.txt {}/data/".format(archive_data_dir, update_dir))
-
-    # # Evidence Codes
-    # os.system("cp {}/evidence_code*.txt {}/data/".format(archive_data_dir, update_dir))
-
-    # Create any necessary file structure not handled by the pipeline itself
- 
-    # Outputs folder
-    # os.system("mkdir {0}/outputs".format(output_dir))
-
-    # # HINT_format folder
-    # os.system("mkdir {0}/outputs/HINT_format".format(output_dir))
-
-    # # taxa folder
-    # os.system("mkdir {0}/outputs/HINT_format/taxa".format(output_dir))
-
-    # # Caches folder
-    # os.system("mkdir {0}/caches".format(output_dir))
-
-    # os.chdir(output_dir)
-    # #os.chdir('/home/resources/interactomes')
-    
-    """
-    Step 1 - Download datasets
-    """
-    # download_datasets(data_root)
-    
-    """
-    Step 2 - Parse raw data and generate initial `raw_interactions.txt` file
+    Step 1 - Parse raw data and generate initial `raw_interactions.txt` file
     
     Reads in all of the datasets in data/parseTargets, standardizes the format, and saved the output to outputs/raw_interactions.txt
     This step also reads in information from our IRES and PDB resources to find PDB interactions.
     Need to confirm that both of these are updating properly.
     """
-    standardize_datasets(update_dir, IRES_FILE, PDB_INFO_FILE, 
-                         ires_pdblike_fpath=IRES_PDB_BUNDLE_FILE, 
-                         pdb_bundle_info_fpath=PDB_BUNDLE_INFO_FILE, 
-                         **DATA_CONFIGS)
+    standardize_datasets(update_dir, **DATA_CONFIGS)
     print('Number of rows parsed:', ROW_COUNTER[0])
 
     """
-    Step 3 - Replace all entries from certain publication-method-taxa combos
+    Step 2 - Replace all entries from certain publication-method-taxa combos
     Uses some pre-generated (don't know how, where, when, or why) interactome sets for some organisms (data/explicit_interactomes)
     Adds all of the entries included in these files to `raw_interactions.txt` and drops any of the redundant rows.
     """
@@ -602,7 +445,7 @@ if __name__ == '__main__':
     # Dataset ready for curation
 
     """
-    Step 3.1 - Revise parsed raw_interaction data and fill in UniProt IDs if available in source
+    Step 2.1 - Revise parsed raw_interaction data and fill in UniProt IDs if available in source
     """
     raw_interactions = pd.read_csv(update_root / 'outputs/raw_interactions.txt', sep='\t')
 
