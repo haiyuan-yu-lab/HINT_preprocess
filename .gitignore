@@ -1,10 +1,9 @@
 # Project specific files
 logs/
-*.slurm
 pdb_data_prep/
 figures/
 archive/
-
+draft*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

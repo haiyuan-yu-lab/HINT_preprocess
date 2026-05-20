@@ -2,7 +2,7 @@ import os, sys
 from pathlib import Path
 
 import pandas as pd
-from configs import *
+# from configs import *
 
 
 """
@@ -49,9 +49,22 @@ def extract_uprot_meta_info(df_prot, source_path, out_path, pid_col='UniProt', m
 
 
 if __name__ == '__main__':
-    update_root = Path(UPDATE_DIR)
+    """
+    Pre-requisite: `id_to_uniprot.txt` file created (`4-HINT_data_curation.ipynb`)
+    """
+    import argparse
+    parser = argparse.ArgumentParser(description='Create ID mapping')
+    parser.add_argument('--update_dir', type=str, help='Path to the update directory')
+    parser.add_argument('--uniprot_knowledgebase', type=str, default='/share/yu/resources/UniProt/release_202601/knowledgebase/', 
+                        help='Directory for UniProt knowledgebase')
+    args = parser.parse_args()
+    source_root = Path(args.uniprot_knowledgebase)
+    update_root = Path(args.update_dir)
+    # update_root = Path(UPDATE_DIR)
     data_root = update_root / 'outputs/cache'
-    prot_meta_root = Path('/home/yl986/data/HINT/uniprot_source/release_202401/knowledgebase/complete/meta')
+    prot_meta_root = source_root / 'complete/meta'
+    # prot_meta_root = Path('/home/yl986/data/HINT/uniprot_source/release_202401/knowledgebase/complete/meta')
     df_prot = pd.read_csv(data_root / 'id_to_uniprot.txt', sep='\t')
 
     extract_uprot_meta_info(df_prot, prot_meta_root, out_path=data_root, pid_col='primary_short')
+    print('Done!')

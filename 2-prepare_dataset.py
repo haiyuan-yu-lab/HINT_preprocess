@@ -413,7 +413,7 @@ if __name__ == '__main__':
     # Set up starting / output directories
     import argparse
 
-    parser = argparse.ArgumentParser(description='Process HINT dataset')
+    parser = argparse.ArgumentParser(description='Prepare PPI source data')
     parser.add_argument('--update_dir', type=str, help='Path to the update directory')
     parser.add_argument('--archive_data_dir', type=str, default='/home/yl986/data/HINT/data/', help='Path to the archive data directory')
     # parser.add_argument('--wipe', action='store_true', help='Wipe the update directory before processing')
